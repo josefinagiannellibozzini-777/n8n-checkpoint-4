@@ -1,0 +1,504 @@
+{
+  "name": "Checkpoint 4 - Sincronización con Ecosistemas de Negocio",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "2ec4b985-9f90-41ed-9b73-cc244aba99cb",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "KYoiptszI3W3gmr4",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "13f585b1-bd55-4e71-ab4a-cc1b6d21044f",
+              "leftValue": "={{ $json.Subject }}",
+              "rightValue": "Auto-reply",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "16b04d3d-a8ae-487b-9dd3-2fede4b187be",
+              "leftValue": "={{ $json.Subject }}",
+              "rightValue": "Out of office",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "f20f37ae-29a8-41e1-837e-b7ca495c04f6",
+              "leftValue": "={{ $json.Subject }}",
+              "rightValue": "Undeliverable",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "27f515ab-3ac6-4c0e-9d8f-cebeba8985a5",
+              "leftValue": "={{ $json.From }}",
+              "rightValue": "no-reply@",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        224,
+        0
+      ],
+      "id": "9ee8a0aa-0900-4ca4-b415-5780fd8377df",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Por favor, analizá el siguiente correo de un cliente de nuestra tienda y redactá una propuesta de respuesta:\n\nAsunto: {{ $('Gmail Trigger').item.json.Subject }}\nMensaje del cliente: {{ $('Gmail Trigger').item.json.snippet }}",
+        "options": {
+          "systemMessage": "Sos un asistente de soporte al cliente de una tienda online.\nTu objetivo es leer las consultas, reclamos o dudas de los clientes y redactar una propuesta de respuesta profesional, cordial y empática.\n\nPautas a seguir:\n1. Saludá cordialmente al cliente.\n2. Reconocé claramente el motivo de su consulta (envíos, compras, cambios o devoluciones).\n3. Brindale una respuesta clara y resolutiva, o indicale los pasos a seguir.\n4. Despedite con amabilidad y la firma del \"Equipo de Soporte\".\n5. Mantené un tono humano, empático y formal pero accesible.\n\nImportante: Respondé ÚNICAMENTE con el texto del correo listo para enviar. No agregues comentarios adicionales como \"Aquí tienes tu borrador\" o explicaciones fuera del mensaje."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        480,
+        0
+      ],
+      "id": "5cd0e91a-dd8a-40c4-993d-6131c7a5a370",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ea02e3a3-6259-4ece-b666-d472c1e766b8",
+              "name": "email",
+              "value": "={{ $('Gmail Trigger').item.json.From.match(/<([^>]+)>/)?.[1] || $('Gmail Trigger').item.json.From }}",
+              "type": "string"
+            },
+            {
+              "id": "7f4b0a7b-128d-4b78-a8f4-1f3ee200a4d6",
+              "name": "nombre",
+              "value": "={{ $('Gmail Trigger').item.json.From.split('<')[0].trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "e77cab7d-a4c7-423c-b61e-d7b959b943e9",
+              "name": "asunto",
+              "value": "={{ $('Gmail Trigger').item.json.Subject }}",
+              "type": "string"
+            },
+            {
+              "id": "e699de7e-5e3a-4f12-9c39-300014c7083f",
+              "name": "respuesta_ia",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        816,
+        0
+      ],
+      "id": "26152c44-b268-4185-af16-ff3185cb3576",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "search",
+        "limit": 1,
+        "filterGroupsUi": {
+          "filterGroupsValues": [
+            {
+              "filtersUi": {
+                "filterValues": [
+                  {
+                    "propertyName": "email|string",
+                    "value": "={{ $json.email }}"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        0
+      ],
+      "id": "b632aafc-aa54-44a5-9626-5882d65257ad",
+      "name": "Search contacts",
+      "alwaysOutputData": true,
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "UgrPXWkxa64NXQGB",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "={{ $('Edit Fields').item.json.asunto }}",
+        "message": "={{ $('AI Agent').item.json.output }}",
+        "options": {
+          "sendTo": "={{ $('Edit Fields').item.json.email }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1712,
+        -32
+      ],
+      "id": "1e1d2e27-78c8-404f-ae28-aa32050a670c",
+      "name": "Create a draft",
+      "webhookId": "90062f21-361f-42a0-a6e0-5ef2fdc63f35",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "KYoiptszI3W3gmr4",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0C7VHR9PGW",
+          "mode": "list",
+          "cachedResultName": "soporte"
+        },
+        "text": "=📩 *Nuevo Ticket de Soporte Procesado* *Cliente:* {{ $('Edit Fields').item.json.nombre }} ({{ $('Edit Fields').item.json.email }}) *Asunto:* {{ $('Edit Fields').item.json.asunto }} *Estado:* Contacto verificado/creado en HubSpot y borrador listo en Gmail para revisión humana (HITL).",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        1920,
+        -32
+      ],
+      "id": "2309b74a-2df5-4fe2-ac63-4100228b3436",
+      "name": "Send a message",
+      "webhookId": "1f4cd152-aa47-48d7-8262-dd6babaf28ad",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "mauDqaHHxzrO02a4",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        528,
+        -144
+      ],
+      "id": "d9516ce6-5303-4b15-bd35-80f07a2b5794",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        480,
+        176
+      ],
+      "id": "6949e7f8-6e63-4b50-9c70-c6644c42e00a",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1d3fe7d8-005f-4f6a-9ee8-f2207e67b7a0",
+              "leftValue": "={{ $json?.id || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1264,
+        0
+      ],
+      "id": "3f4eb43e-2e6d-49a0-b51f-43418fa7fde4",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "email": "={{ $('Edit Fields').item.json.email }}",
+        "additionalFields": {
+          "firstName": "={{ $('Edit Fields').item.json.nombre }}"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        1472,
+        -80
+      ],
+      "id": "29c6eb29-d5b0-410a-997f-4137621fe482",
+      "name": "HubSpot - Update",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "UgrPXWkxa64NXQGB",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "email": "={{ $('Edit Fields').item.json.email }}",
+        "additionalFields": {
+          "firstName": "={{ $('Edit Fields').item.json.nombre }}"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        1472,
+        64
+      ],
+      "id": "a24ee1ac-4cf8-4093-a5e8-75d779f90c92",
+      "name": "HubSpot - Create",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "UgrPXWkxa64NXQGB",
+          "name": "HubSpot account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Search contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search contacts": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a draft": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        []
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "HubSpot - Update",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HubSpot - Create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HubSpot - Update": {
+      "main": [
+        [
+          {
+            "node": "Create a draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HubSpot - Create": {
+      "main": [
+        [
+          {
+            "node": "Create a draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "3cf838a4-4ed7-4dbc-b7c0-0c1db08fc6ca",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "60db09d345a03a40e72db6b9898fe784b95730fa20f011ee37e0cd0f1fdc6f40"
+  },
+  "nodeGroups": [],
+  "id": "r12o2bwN6olDwss0",
+  "tags": []
+}
